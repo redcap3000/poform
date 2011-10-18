@@ -1,8 +1,8 @@
 <?php
-
 /*
 
 poform - PHP 5 form object generator
+====================================
 
 Ronaldo Barbachano Oct 2011
 
@@ -48,11 +48,36 @@ class poform{
 		}
 	
 	}
+	
+	public function build_selection_string($array){
+	// codes an assoc. array into the proper syntax for creating a simple select list
+		foreach($array as $key=>$value)
+			$result .= $key.'-'.$value.':';
+		return 'select '.$result;
+	
+	}
+
+	private function build_attr_menu($array,$field_name){
+	// examines field type to determine what values should be in the attribute menu
+		foreach($array as $key=>$value)
+			$menu .= "<option value='$value'>".(   is_string($key)?$key:$value)."</option>";
+		return($menu ?'<select name="'.$field_name.'"><option value="">Select '.str_replace('_',' ',$field_name).'</option>' . $menu . '</select>' : '');
+	}
 
 	function load($object,$id=NULL,$classname=NULL){
 	// creates the insides of a form based on an object
-	if(!is_array($object) && !is_object($object) &&$id != NULL && $classname !=NULL){
-	// by default we create all fields as text inputs (for now)
+		if(!is_array($object) && !is_object($object) &&$id != NULL && $classname !=NULL){
+			if(!(strpos($object,'select ') === false )){
+				// probably better way to express this
+				$object = trim($object);
+				$object = explode(' ',$object,2);
+				$object= explode(':',$object[1]);
+				foreach($object as $key=>$value){
+					$temp = explode('-',$value,2);
+					$select[$temp[0]]=$temp[1];
+				}
+			return self::build_attr_menu($select,$classname.'_'.$id);
+		}
 		return ucwords(str_replace('_',' ',$id)) . " <input type='text' id='".$classname.'_'.$id."' value='$object'/>";
 	}elseif(is_array($object)){
 		foreach($object as $x=>$y){
@@ -75,4 +100,6 @@ class poform{
 		}
 		return $r;
 	}
+	
+
 }
