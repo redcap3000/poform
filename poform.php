@@ -15,6 +15,10 @@ Ronaldo Barbachano Oct 2011
 define('SHOW_CLASS',false);
 // without fieldsets may be useful for quick 'list' views ..
 define('SHOW_FIELDSET',false);
+
+define('FORM_METHOD','GET');
+
+define('FORM_ACTION','');
 class poform{
 
 	public static function make($object,$i=false,$settings=NULL){
@@ -22,18 +26,12 @@ class poform{
 	// maybe some options ? settings like form attribute settings basically
 		// puts a loaded object into a form with fields
 		
-		echo ($i == false?'<form>':'');
-		echo (SHOW_FIELDSET?"<fieldset>":'');
+		echo ($i == false?'<form action="'.FORM_ACTION.'" method="'.FORM_METHOD.'">':'') . (SHOW_FIELDSET?"<fieldset>":'');
 		
-		foreach($object as $a=>$b){
-			if(is_array($b) || is_object($b))
-				self::make($b,true);
-			else
-				echo $b;
-		}
+		foreach($object as $a=>$b)
+			echo(is_array($b) || is_object($b)?self::make($b,true): $b);
 		
-		echo (SHOW_FIELDSET?'</fieldset>':'');	
-		echo ($i == false?'<input type ="submit"/></form>':'');
+		echo (SHOW_FIELDSET?'</fieldset>':'') . ($i == false?'<input type ="submit"/></form>':'');
 	}
 	
 	public static function build_selection_string($array){
