@@ -95,7 +95,7 @@ class poform{
 	// support more types like text area .. also support html 5 types where available
 	// for date and email / phone number etc.
 
-		$select_array = array('select','checkbox','password','radio','sumbit','email','search','email');
+		$select_array = array('select','checkbox','password','radio','sumbit','email','search');
 		if($classname != NULL && $id != NULL){
 			$id = explode(':',$id,2);
 			if(count($id) == 2)
