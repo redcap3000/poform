@@ -10,15 +10,30 @@ Ronaldo Barbachano Oct 2011
  a php object. Why? Ultimately to tie this in with my other libraries (couchCurl/html5_core)
  to create a couch/php framework. This component would aid the the manipulation of 
  json objects (when using jser)
+ 
+ To DO - Automatic Post variable processing ... prefill values where available..
+ 
+ HTML 5 Stuff to Support 
+ number, date,slider, required validation tag (maybe look for '*' char in key name
 */
 
 define('SHOW_CLASS',false);
+
 // without fieldsets may be useful for quick 'list' views ..
-define('SHOW_FIELDSET',false);
+define('SHOW_FIELDSET',true);
+
+// Display either a label (if show label true) or text of the variable (class parameter) name
+define('SHOW_VAR',true);
+
+define('SHOW_LABEL',true);
+
+// for 'text' input definitions
+define('SHOW_PLACEHOLDER',true);
 
 define('FORM_METHOD','GET');
 
 define('FORM_ACTION','');
+// would be cooler to just pass around html5_core tag objects ..
 class poform{
 
 	public static function make($object,$i=false,$settings=NULL){
@@ -42,24 +57,30 @@ class poform{
 	
 	}
 
-	private static function build_checkbox($array,$field_name){
-		foreach($array as $k=>$v)
-			$r .= "<input type='checkbox' name='$field_name' value='$k'/>$v";
-		return $r;
-	}
-	
 	private static function build_arr($array,$field_name,$type){
 	// three functions in one1
 	$field_name = trim($field_name);
+
 		foreach($array as $k=>$v)
-			$r .=  ($type != 'select'? "<input type='$type' name='$field_name' value='$k'/>$v" : "<option value='$k'>$v</option>\n" ) ;
-		return  ($type != 'select'? $r : "\n" .'<select name="'.$field_name.'">'."\n".'<option value="">Select '.str_replace('_',' ',$field_name).'</option>' . $r . '</select>' . "\n");
+			$r .=  ($type != 'select'? "<input type='$type' name='$field_name'".( $k != '' && $k != '0' ?" value='$k'":'')."/>" . ($type == 'checkbox' || $type == 'radio' ? $v:'') : "<option value='$k'>$v</option>\n" ) ;
+		return   self::labeler($field_name,$ident) .($type != 'select'? $r : "\n" .'<select name="'.$field_name.'">'."\n".'<option value="">Select '.str_replace('_',' ',$field_name).'</option>' . $r . '</select>' . "\n");
+	
+	}
+	
+	private static function labeler($field_name,$ident){
+	// Might want to test if the show_var is (commented out) disabled.. may not return NULL
+		if(!SHOW_VAR) return NULL;
+	// checks definitions to determine wether to show labels or just the var name..
+		$ident = ucwords(str_replace('_',' ',$field_name));
+		return (!SHOW_LABEL?$ident:"<label for='$field_name'>$ident</label>");
 	
 	}
 
 	private static function decode_string($s){
 	// turns a coded string into a usable array for 'build_arr'
 		$s = trim($s);
+	// add extra space to allow designation of special options like 
+	// * = required
 		$s = explode(' ',$s,2);
 		$s = explode(':',$s[1]);
 		foreach($s as $key=>$value){
@@ -74,7 +95,7 @@ class poform{
 	// support more types like text area .. also support html 5 types where available
 	// for date and email / phone number etc.
 
-		$select_array = array('select','checkbox','password','radio','sumbit');
+		$select_array = array('select','checkbox','password','radio','sumbit','email','search','email');
 		if($classname != NULL && $id != NULL){
 			$id = explode(':',$id,2);
 			if(count($id) == 2)
@@ -89,8 +110,9 @@ class poform{
 					if(!(strpos($object,"$s ") === false ))
 						return self::build_arr(self::decode_string($object),$classname.$id,$s);
 				}		
-			// default ... 
-			return ucwords(str_replace('_',' ',$id)) . " <input type='text' id='".trim($classname.$id)."' value='$object'/>";
+			// used to check for post var etc.. 
+			$final_id = trim($classname.$id);
+			return self::labeler($final_id,$id) . " <input type='text' ".(!SHOW_PLACEHOLDER?NULL: "placeholder='".ucwords(str_replace('_',' ',$id))."' ") ."id='".$final_id."' ".($object != '0' || $object != ''?"value='$object' ":'')."/>";
 			}
 		}
 		// Recurse... 
