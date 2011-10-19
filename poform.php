@@ -52,6 +52,7 @@ class poform{
 	
 	private static function build_arr($array,$field_name,$type){
 	// three functions in one1
+	$field_name = trim($field_name);
 		foreach($array as $k=>$v)
 			$r .=  ($type != 'select'? "<input type='$type' name='$field_name' value='$k'/>$v" : "<option value='$k'>$v</option>\n" ) ;
 		return  ($type != 'select'? $r : "\n" .'<select name="'.$field_name.'">'."\n".'<option value="">Select '.str_replace('_',' ',$field_name).'</option>' . $r . '</select>' . "\n");
@@ -91,7 +92,7 @@ class poform{
 						return self::build_arr(self::decode_string($object),$classname.$id,$s);
 				}		
 			// default ... 
-			return ucwords(str_replace('_',' ',$id)) . " <input type='text' id='".$classname.$id."' value='$object'/>";
+			return ucwords(str_replace('_',' ',$id)) . " <input type='text' id='".trim($classname.$id)."' value='$object'/>";
 			}
 		}
 		// Recurse... 
