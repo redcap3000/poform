@@ -17,7 +17,7 @@ class form_class{
 	// what appears in the selection list, or use helper function to convert assoc. arrays
 	public $selection = 'select a-Value A:b-value B:c-value C';
 	
-	public $a = array('select'=> array('1'=>'Value 1','2'=>'Value 2','3'=>'value 3'));
+	public $a = array('select:numbers'=> array('1'=>'Value 1','2'=>'Value 2','3'=>'value 3'));
 	
 	public $checkbox = array('checkbox:fav_number'=> array('1'=>'Value 1','2'=>'Value 2','3'=>'value 3'));
 		
