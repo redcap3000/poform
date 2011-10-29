@@ -55,7 +55,6 @@ class poform{
 	// settings would be an array to define how to handle basic form settings, and 
 	// maybe some options ? settings like form attribute settings basically
 		// puts a loaded object into a form with fields
-		//die(print_r($object));
 		// unset any values with an underscore ??
 		unset ($object->_r,$object->_d,$object->_f,$object->_p);
 		
@@ -138,23 +137,24 @@ class poform{
 	// _d, evetually it will be put here, am having class focus issues
 		unset($object->_p);
 		
-		if($_r && $_POST && $required == NULL){
 			unset($missing);
+		if($_r && $_POST && $required == NULL){
 			if($_POST){
 				foreach($_r as $value)
-					if(!array_key_exists($value,$_POST) || $value == '')
-						$missing []= $value;
+					if(!array_key_exists($value,$_POST) || $_POST[$value] == '')
+						$missing []= $value;	
+					else
+						$missing = false;
+					
 				
 			}
-			
-		if(!is_array($missing)){
+		if($missing == false){
 		// probably should abstract this more, and possibly class it, this is getting 
 		// verbose/specialized
 			// convert 'select action' into database name
 			$db = $_POST['select_action'];
 			unset($_POST['select_action']);
 			$id [] = time();
-			$_POST = array_filter($_POST);
 			// additional 'id' fields in the _id can be designated by determining the load
 			// order for each class, in relation to the _d parameter
 			// stores keys with _id as the doc title (_id) and unsets them from post 
@@ -175,9 +175,11 @@ class poform{
 			foreach($_POST as $key =>$value){
 			// forcing integers to store as so.. instead of quoted integers
 				
-				if(is_int($int =$value + 0 ))
+				if($value != '' && is_int($int =$value + 0 ) && $int != 0)
 					$_POST[$key] =  $int;
 			}
+			
+			$_POST = array_filter($_POST);
 			// numerical values still not forcing to numbers...
 			$json = json_encode($_POST);
 			// create config option for number base encoding
@@ -185,8 +187,9 @@ class poform{
 			// into a displayable object ?
 			$result =couchCurl::put($json,couchCurl::handle_couch_id($id,36),$db );			
 			// look up new record and get the REV so we can update the record properly
-			if($result) exit ('<h3>Record added</h3>');
-			$object = $_POST;
+			// this result gets added to the top and then displays a blank form .. need to create
+			// array structures to handle this functionality after we clean this code up a loott..
+			echo ($result?'<h3>Record added</h3>': 'Problem With Insert');
 			// if/when successful then take care to either hide the form or what ? for tasks we dont want people
 			// to edit existing tasks ... but dont want to add that functionality in poform
 			}
