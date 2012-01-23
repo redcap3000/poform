@@ -1,5 +1,4 @@
 <?php
-define('SHOW_CSS_CLASS',false);
 /*
 
 poform
