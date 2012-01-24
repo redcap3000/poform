@@ -6,19 +6,6 @@
  like to store into a couch database... as long as the parent construct method is invoked 
  this will do couchCurl magic on your child class given the presense of required class variables. (_r, _d, _f etc.)
 
-	Where to use ??
-	
-	Normally your top most class (like an 'address', or a 'user' class) should only have to extend this one
-	
-	*Functions
-	
-	$this->popRecord($id);
-	
-	This has a popRecord, which when supplied an ID (and called from a class that has a couch database of the same name)
-	will set the _POST variable to whatever is in the current revision.
-	
-	This should (theoretically) also update the document when a change is made (still testing this functionality)
-
 */
 
 class poform_cntrl{
@@ -44,6 +31,21 @@ class poform_cntrl{
 		}	
 		
 	}
+	
+	public function unique_field_check($unique_field,$view_name = NULL){
+	// looks up field in corresponding couch database via named view inside the 'cntrl' design doc,
+	// or view named after the unique field in the called class (as according to the design conventions followed elsewhere
+		
+		if(isset($_POST[$unique_field]) && $_SERVER['REQUEST_METHOD'] == "POST" ){
+			if($view_name == NULL) $view_name = $unique_field ;
+			$r = couchCurl::view($_POST[$unique_field] ,$view_name,'cntrl',get_called_class());
+			if( (int) count($r['rows']) > 0  ){
+				echo '<div class="err">The field '.str_replace('_',' ',$unique_field).' exists '.$_POST[$unique_field].', please use another value.</div>';
+				unset($_POST[$unique_field]);
+
+			}
+	}
+	
 	function __construct(){
 		// consider incorporating the class name here ? 
 		$called_class = get_called_class();	
