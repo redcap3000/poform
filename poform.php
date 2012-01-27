@@ -14,7 +14,7 @@ class poform{
 		self::make(self::load($this));
 	}
 	public static function make($object,$i=false,$settings=NULL){
-		$r = ($i == false?"\n".'<form action="'.$_SERVER["REQUEST_URI"].'" method="POST">' . "\n<fieldset>" :'');
+		$r = ($i == false?"\n".'<form action="'.$_SERVER["PATH_TRANSLATED"].'" method="POST">' . "\n<fieldset>" :'');
 		foreach($object as $a=>$b){
 			if($a != 'missing')
 			$r .=  (is_array($b) || is_object($b)?self::make($b,true): $b) ;
@@ -43,17 +43,20 @@ class poform{
 		else{
 			$a_names = array('type','name','inner','value','placeholder');
 			foreach(func_get_args() as $loc=>$value)
-				if($value != NULL && $loc != 2)
+				if($value != NULL && $loc != 2 && $value != '')
 					$a[trim($a_names[$loc])] = trim($value);
 			// avoid syntax errors .. should be debugged and eventually removed once I iron out all the remaining bugs
-			if( $type != 'checkbox' && !isset($a['value'])  && strpos($inner,'value') == 0 )
+			if( $type != 'checkbox' && !isset($a['value'])  && strpos($inner,'value') === 0 )
 				$a['value'] = $inner;
+			if(isset($a['value']))
+				if($a['value'] == $inner)
+					unset($inner);
+			foreach($a as $key=>$value){
+				if(trim($value) != '')
+					$r []= "$key='$value'";	
 				
-			if($a['value'] == $inner)
-				unset($inner);
-			foreach($a as $key=>$value)
-				$r []= "$key='$value'";	
-			return    '<input ' . implode($r,' ') .  ($inner != NULL? $inner : NULL) . '/>' ;
+				}
+			return    '<input ' . implode($r,' ') .  (isset($inner) ? ($inner != NULL? $inner : NULL) :NULL) . '/>' ;
 		}	
 	}
 	
@@ -66,49 +69,18 @@ class poform{
 		if($type == 'number' || $type == 'range'){
 			// this needs work...
 			return "\t\t<fieldset>" .self::labeler($field_name) . 
-			self::make_input($type,$field_name, (count($array) > 0? ($array[0] !== 0?" min='".$array[0]."' ":'') . ($array[1]?" max='".$array[1]."' ":'') . ($array[2]?" step='".$array[2]."' ":'') .  ' value="' . $_POST[$field_name].'"'   : ''))."\n" . ( $_POST[$field_name] == '' && in_array(trim($field_name),$required)? '<b class="req">*required</b>' : NULL    ) . '</fieldset>';	
-		}else{
+			self::make_input($type,$field_name, (count($array) > 0? ($array[0] !== 0?" min='".$array[0]."' ":'') . (isset($array[1]) ?" max='".$array[1]."' ":'') . (isset($array[2])?" step='".$array[2]."' ":'') .  (isset($_POST[$field_name]) && $_POST[$field_name] != '' ? ' value="' . $_POST[$field_name].'"' : '')  : ''))."\n" . ( isset($_POST[$field_name])  && in_array(trim($field_name),$required)? ($_POST[$field_name] == '' ? '<b class="req">*required</b>' : '') : NULL    ) . '</fieldset>';	
+		}elseif(is_object($array) || is_array($array)){
+		$r='';
 		foreach($array as $k=>$v){
 				if($type == 'radio' || $type == 'checkbox'){
 					$r .= "\n\t\t<fieldset><em>$v</em>\n";	
 					}
 				// not a great place for this complex statement ...
-				$r .=   ($type != 'select'?
-						"\t\t".
-						self::make_input($type,$field_name, 
-					( 
-					
-					$k != '' && $k != '0' 
-					
-					?   
-					// causing probs ....for radio buttons and setting both values to pf_check ... we shouldn't rely on any sort of post value
-					// and stick to defaults ?? like the $v ...
-						' value = "' . $k . '"'.
-						 // MOVE THIS ... handles select/checkbox / radio population from post values ... but is repeated for the radio
-						 // values
-						(
-							($_POST[$field_name] == $k || ($k == 1 && $_POST[$field_name] == 'on'))  
-							?
-							($type == 'radio' ?' checked ':'') 
-							:
-						'')
-						
-					: 
-						($_POST[$field_name]?$_POST[$field_name]:'') 
-					)
-					)
-						: "\t\t\t<option value='$k' ".
-						($_POST[$field_name] == $k
-						?
-						' selected="selected" '
-						:
-						'')
-						.">$v</option>\n" )  . 
-						($type == 'radio' || $type == 'checkbox'? '</fieldset>':NULL);
-				
+				$r .=   ($type != 'select'?"\t\t".self::make_input($type,$field_name,($k != '' && $k != '0'?' value = "' . $k . '"'.((isset($_POST[$field_name]) && ($_POST[$field_name] == $k || ($k == 1 && $_POST[$field_name] == 'on')))?($type == 'radio' ?' checked ':'') :''):(isset($_POST[$field_name])?$_POST[$field_name]:''))): "\t\t\t<option value='$k' ".(isset($_POST[$field_name]) == $k? (isset($_POST[$field_name])  ? ($_POST[$field_name] == $k ?' selected="selected" ' : '') : ''):'').">$v</option>\n" ).($type == 'radio' || $type == 'checkbox'? '</fieldset>':NULL);
 			}
 			return   '<fieldset>'.self::labeler($field_name ).
-			($type != 'select'? $r : "\t\t" .'<select name="'.$field_name.'"'.'>'."\n\t\t\t".'<option value="">Select '.str_replace('_',' ',$field_name)."</option>\n" . $r . "\t\t</select>" ) . ( $_POST[$field_name] == '' && in_array(trim($field_name),$required)? '<b class="req">*required</b>' : NULL    ) .'</fieldset>';
+			($type != 'select'? $r : "\t\t" .'<select name="'.$field_name.'"'.'>'."\n\t\t\t".'<option value="">Select '.str_replace('_',' ',$field_name)."</option>\n" . $r . "\t\t</select>" ) . ( isset($_POST[$field_name]) && $_POST[$field_name] == '' && in_array(trim($field_name),$required)? '<b class="req">*required</b>' : NULL    ) .'</fieldset>';
 		}
 	}
 	
@@ -120,15 +92,17 @@ class poform{
 		$s = explode(' ',$s,2);
 		foreach(explode(':',$s[1]) as $v){
 			$s = explode('-',$v,2);
-			$x[$s[0]]=trim($s[1]);
+			// double check this
+			if(count($s) > 1)
+				$x[$s[0]]=trim($s[1]);
 		}
-		return $x;	
+		return (isset($x) ? $x : false);	
 	}
 	
 	public static function load($object,$id=NULL,$alt_id=NULL,$required=NULL){
 		if(isset($object->_f) || isset($object->_d)){
 			$a = $object->_f;
-			if($object->_d && is_array($a)) {
+			if(isset($object->_d) && is_array($a)) {
 				$b = $object->_d;
 				$a = array_merge($a,$b);		
 			}
@@ -175,8 +149,8 @@ class poform{
 						
 			$final_id = trim($id);
 			
-			return  "\t<fieldset>\n\t\t". self::labeler($final_id,( $_POST[$final_id] == '' && in_array($final_id,$required)? '<b class="req">*required</b>' : NULL    )) . 
-			"\t\t". self::make_input('text',$final_id,NULL,($object != '0' || $object != ''?  ($_POST[$final_id] ?  $_POST[$final_id]:NULL)  :NULL), ucwords(str_replace('_',' ',$id)) ).
+			return  "\t<fieldset>\n\t\t". self::labeler($final_id,( isset($_POST[$final_id]) && in_array($final_id,$required)? ($_POST[$final_id] == '' ? '<b class="req">*required</b>' : '' ) : NULL    )) . 
+			"\t\t". self::make_input('text',$final_id,NULL,($object != '0' || $object != ''?  (isset($_POST[$final_id]) ?  $_POST[$final_id]:NULL)  :NULL), ucwords(str_replace('_',' ',$id)) ).
 			"\n\t</fieldset>\n";
 			}
 		}
