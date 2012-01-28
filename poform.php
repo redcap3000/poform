@@ -5,16 +5,18 @@ poform
 January 2012
 Ronaldo Barbachano 
 
-*/
 
+to do :: 
+ better reporting of when a record inserts ... 
+ 
+ create a class method (in poform cntrl) to create a viewer for users to edit/delete and view things
+ in 'tabular' format .. ? 
+
+*/
 class poform{
-	function __construct(){
-	// yess... so if a class extends poform it will automatically load and 
-	// render when you create an object that extends poform, given each class has a parent::__construct call
-		self::make(self::load($this));
-	}
 	public static function make($object,$i=false,$settings=NULL){
-		$r = ($i == false?"\n".'<form action="'.$_SERVER["PATH_TRANSLATED"].'" method="POST">' . "\n<fieldset>" :'');
+	// .$_SERVER['PHP_SELF'] . $_SERVER['QUERY_STRING'] .
+		$r = ($i == false?"\n".'<form action="" method="POST">' . "\n<fieldset>" :'');
 		foreach($object as $a=>$b){
 			if($a != 'missing')
 			$r .=  (is_array($b) || is_object($b)?self::make($b,true): $b) ;
@@ -30,6 +32,8 @@ class poform{
 	// Could make use of array functions instead of foreach loops 
 		$name = trim($name);
 		$type = trim($type);
+		// html field types that do not take 'value' statements ...
+		
 		// down and dirty 'complicated' types that would require a bit too much work to use in the flow below...
 		if($type == 'radio')
 			return '<input type="radio" '. " name ='$name' $inner >";
@@ -41,22 +45,33 @@ class poform{
 		// better support coming soon ....
 			return '<textarea name="'.$name.'" '. "$inner>$value</textarea>";
 		else{
+			$ab_types = array('select','radio','number','range','checkbox','password');
 			$a_names = array('type','name','inner','value','placeholder');
+			// this needs some work..
 			foreach(func_get_args() as $loc=>$value)
 				if($value != NULL && $loc != 2 && $value != '')
 					$a[trim($a_names[$loc])] = trim($value);
 			// avoid syntax errors .. should be debugged and eventually removed once I iron out all the remaining bugs
+			
+			if(!in_array($name,$ab_types)){
+//				if( isset($_POST[$name])  && $_POST[$name] != '' && ($value == ''  || $value == NULL)){
+			
+				if( isset($_POST[$name])  && $_POST[$name] != '' ){
+				 // a bunch of types wont like this behavior ... 
+					$a['value'] = $_POST[$name];
+				}
+			}
 			if( $type != 'checkbox' && !isset($a['value'])  && strpos($inner,'value') === 0 )
 				$a['value'] = $inner;
 			if(isset($a['value']))
 				if($a['value'] == $inner)
 					unset($inner);
-			foreach($a as $key=>$value){
-				if(trim($value) != '')
-					$r []= "$key='$value'";	
-				
+
+			foreach(array_filter($a) as $key=>$value){
+//				if(trim($value) != '')
+					$a[$key] = " $key='$value'";				
 				}
-			return    '<input ' . implode($r,' ') .  (isset($inner) ? ($inner != NULL? $inner : NULL) :NULL) . '/>' ;
+			return    '<input' . implode($a,'') .  (isset($inner) ? ($inner != NULL? $inner : NULL) :NULL) . '/>' ;
 		}	
 	}
 	
@@ -64,7 +79,6 @@ class poform{
 	// Designed for radio/checkboxes and select html types that need sets of values as its input.
 	// Also handles proper 'selected' radio on/offs values based on $_POST object
 	// Checkboxes are still under development, as well as multi-select items ...
-	
 		$field_name = trim($field_name);
 		if($type == 'number' || $type == 'range'){
 			// this needs work...
@@ -73,33 +87,39 @@ class poform{
 		}elseif(is_object($array) || is_array($array)){
 		$r='';
 		foreach($array as $k=>$v){
-				if($type == 'radio' || $type == 'checkbox'){
-					$r .= "\n\t\t<fieldset><em>$v</em>\n";	
-					}
 				// not a great place for this complex statement ...
-				$r .=   ($type != 'select'?"\t\t".self::make_input($type,$field_name,($k != '' && $k != '0'?' value = "' . $k . '"'.((isset($_POST[$field_name]) && ($_POST[$field_name] == $k || ($k == 1 && $_POST[$field_name] == 'on')))?($type == 'radio' ?' checked ':'') :''):(isset($_POST[$field_name])?$_POST[$field_name]:''))): "\t\t\t<option value='$k' ".(isset($_POST[$field_name]) == $k? (isset($_POST[$field_name])  ? ($_POST[$field_name] == $k ?' selected="selected" ' : '') : ''):'').">$v</option>\n" ).($type == 'radio' || $type == 'checkbox'? '</fieldset>':NULL);
+				$r .=($type == 'radio' || $type == 'checkbox'?"\n\t\t<fieldset><em>$v</em> \n" :''). ($type != 'select'?
+																									"\t\t".self::make_input($type,$field_name,
+																																				($k != '' && $k != '0'?' value = "' . $k . '"'.	((isset($_POST[$field_name]) && ($_POST[$field_name] == $k || ($k == 1 && $_POST[$field_name] == 'on')))?($type == 'radio' ?' checked ':'') :''):(isset($_POST[$field_name])?$_POST[$field_name]:''))): "\t\t\t<option value='$k' ".(isset($_POST[$field_name]) == $k? (isset($_POST[$field_name])  ? ($_POST[$field_name] == $k ?' selected="selected" ' : '') : ''):'').">$v</option>\n" ).($type == 'radio' || $type == 'checkbox'? '</fieldset>':NULL);
 			}
-			return   '<fieldset>'.self::labeler($field_name ).
-			($type != 'select'? $r : "\t\t" .'<select name="'.$field_name.'"'.'>'."\n\t\t\t".'<option value="">Select '.str_replace('_',' ',$field_name)."</option>\n" . $r . "\t\t</select>" ) . ( isset($_POST[$field_name]) && $_POST[$field_name] == '' && in_array(trim($field_name),$required)? '<b class="req">*required</b>' : NULL    ) .'</fieldset>';
+			return   '<fieldset>'.self::labeler($field_name,$required ).  
+			($type != 'select'? $r : "\t\t" .'<select name="'.$field_name.'"'.'>'."\n\t\t\t".'<option value="">Select '.str_replace('_',' ',$field_name)."</option>\n" . $r . "\t\t</select>" ) .'</fieldset>';
 		}
 	}
 	
-	private static function labeler($field_name,$inner=NULL){
-		return  "<label for='$field_name'>". ($inner == NULL? NULL:$inner)  . ucwords(str_replace('_',' ',$field_name))."</label>\n";
+	private static function labeler($field_name,$required=NULL){
+		return  "<label for='$field_name'>".  ucwords(str_replace('_',' ',$field_name)).($required == NULL ? '' : ( in_array($field_name,$required)? (!isset($_POST[$field_name]) || $_POST[$field_name] == '' ? '<b class="req">*required</b>' : '' ) : NULL    ) ) . "</label>\n"  ;
 	}
 
+// make a special function for fields that need to be 'confirmed' ? (right now mainly for email/passwords)
+// search the _POST object for a confirm ... and if the two fields dont match pass a special message to the labeler ?
 	private static function decode_string($s){
 		$s = explode(' ',$s,2);
+		
 		foreach(explode(':',$s[1]) as $v){
 			$s = explode('-',$v,2);
 			// double check this
 			if(count($s) > 1)
 				$x[$s[0]]=trim($s[1]);
 		}
-		return (isset($x) ? $x : false);	
+		return (isset($x) ? $x : $s[0]);	
 	}
 	
 	public static function load($object,$id=NULL,$alt_id=NULL,$required=NULL){
+	// This function could use some optimization...
+	
+	// often some objects won't have a _d set ... i'm using it a lot less myself in favor 
+	// of the filter ... but d becomes needed when passing fields to new cumulative states ..
 		if(isset($object->_f) || isset($object->_d)){
 			$a = $object->_f;
 			if(isset($object->_d) && is_array($a)) {
@@ -144,13 +164,17 @@ class poform{
 			}
 			elseif(!is_array($object) && !is_object($object)){
 				foreach($select_array as $s)
-					if(!(strpos($object,"$s ") === false ))
-						return self::build_arr(self::decode_string($object),$id,$s,$required);
+					if(!(strpos($object,"$s ") === false )){
+					// basically we have to make this do the block of code below .... hmmm
+						return "\t<fieldset>\n\t\t". self::labeler($id,$required) . self::make_input(trim($s) , $id,'', '' ,$s) . "\n\t</fieldset>\n";
+//						return self::build_arr(self::decode_string($object),$id,$s,$required);
+						
+						}
 						
 			$final_id = trim($id);
-			
-			return  "\t<fieldset>\n\t\t". self::labeler($final_id,( isset($_POST[$final_id]) && in_array($final_id,$required)? ($_POST[$final_id] == '' ? '<b class="req">*required</b>' : '' ) : NULL    )) . 
-			"\t\t". self::make_input('text',$final_id,NULL,($object != '0' || $object != ''?  (isset($_POST[$final_id]) ?  $_POST[$final_id]:NULL)  :NULL), ucwords(str_replace('_',' ',$id)) ).
+			// try to use new labler syntax for the make_input ? 
+			return  "\t<fieldset>\n\t\t". self::labeler($id,$required) . 
+			"\t\t". self::make_input('text',$final_id,'',($object != '0' || $object != ''?  (isset($_POST[$final_id]) ?  $_POST[$final_id]:NULL)  :NULL), ucwords(str_replace('_',' ',$id)) ).
 			"\n\t</fieldset>\n";
 			}
 		}
@@ -168,6 +192,6 @@ class poform{
 							$r[$x][$a] = self::load($b,$a,$x,$required);
 					else
 						$r[$x] = self::load($y,$x,$x,$required);
-		return $r;
+		return (isset($r) ? $r : $object);
 		}
 }
